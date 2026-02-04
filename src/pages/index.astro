@@ -104,28 +104,37 @@ const speedUnit = unitGroup === "metric" ? "km/jam" : "mph";
       <h2>5 Hari ke Depan</h2>
       <div class="cards">
         {
-          days.map((day) => {
-            const date = new Date(`${day.datetime}T00:00:00`);
-            return (
-              <article class="card">
-                <p class="card__date">{formatter.format(date)}</p>
-                <p class="card__temp">
-                  {Math.round(day.tempmax)}
-                  {tempUnit}
-                  <span>
-                    {" "}
-                    / {Math.round(day.tempmin)}
+          days.map(
+            (day: {
+              datetime: any;
+              tempmax: number;
+              tempmin: number;
+              conditions: unknown;
+              precipprob: any;
+              uvindex: any;
+            }) => {
+              const date = new Date(`${day.datetime}T00:00:00`);
+              return (
+                <article class="card">
+                  <p class="card__date">{formatter.format(date)}</p>
+                  <p class="card__temp">
+                    {Math.round(day.tempmax)}
                     {tempUnit}
-                  </span>
-                </p>
-                <p class="card__desc">{day.conditions}</p>
-                <div class="card__details">
-                  <span>Hujan {Math.round(day.precipprob ?? 0)}%</span>
-                  <span>UV {day.uvindex ?? 0}</span>
-                </div>
-              </article>
-            );
-          })
+                    <span>
+                      {" "}
+                      / {Math.round(day.tempmin)}
+                      {tempUnit}
+                    </span>
+                  </p>
+                  <p class="card__desc">{day.conditions}</p>
+                  <div class="card__details">
+                    <span>Hujan {Math.round(day.precipprob ?? 0)}%</span>
+                    <span>UV {day.uvindex ?? 0}</span>
+                  </div>
+                </article>
+              );
+            },
+          )
         }
       </div>
     </section>
