@@ -1,8 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-const defaultLocation = import.meta.env.DEFAULT_LOCATION;
-const unitGroup = import.meta.env.UNIT_GROUP;
+const defaultLocation =
+  import.meta.env.PUBLIC_DEFAULT_LOCATION || "Malang, Indonesia";
+const unitGroup = import.meta.env.PUBLIC_UNIT_GROUP || "metric";
 const apiKey = import.meta.env.VISUAL_CROSSING_API_KEY;
 
 const url = new URL(Astro.request.url);
