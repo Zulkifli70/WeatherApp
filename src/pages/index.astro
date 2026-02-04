@@ -1,9 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-const defaultLocation = process.env.DEFAULT_LOCATION;
-const unitGroup = process.env.UNIT_GROUP ?? "metric";
-const apiKey = process.env.VISUAL_CROSSING_API_KEY;
+const defaultLocation = import.meta.env.DEFAULT_LOCATION;
+const unitGroup = import.meta.env.UNIT_GROUP;
+const apiKey = import.meta.env.VISUAL_CROSSING_API_KEY;
 
 const url = new URL(Astro.request.url);
 const query = url.searchParams.get("q")?.trim() || defaultLocation;
