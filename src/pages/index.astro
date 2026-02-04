@@ -1,0 +1,334 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+export const prerender = false;
+
+const defaultLocation = import.meta.env.DEFAULT_LOCATION ?? "Malang, ID";
+const unitGroup = import.meta.env.UNIT_GROUP ?? "metric";
+const apiKey = import.meta.env.VISUAL_CROSSING_API_KEY;
+
+const url = new URL(Astro.request.url);
+const query = url.searchParams.get("q")?.trim() || defaultLocation;
+
+let data = null;
+let error = "";
+
+if (!apiKey) {
+  error = "API key Visual Crossing belum diatur di file .env.";
+} else {
+  const apiUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${encodeURIComponent(
+    query,
+  )}?unitGroup=${unitGroup}&key=${apiKey}&contentType=json`;
+
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`Gagal ambil data: ${response.status}`);
+    }
+    data = await response.json();
+  } catch (err) {
+    error =
+      err instanceof Error ? err.message : "Terjadi error saat memuat data.";
+  }
+}
+
+const current = data?.currentConditions;
+const days = Array.isArray(data?.days) ? data.days.slice(0, 5) : [];
+const resolvedAddress = data?.resolvedAddress ?? query;
+const description = data?.description ?? "Ramalan cuaca harian.";
+
+const formatter = new Intl.DateTimeFormat("id-ID", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+});
+
+const tempUnit = unitGroup === "metric" ? "°C" : "°F";
+const speedUnit = unitGroup === "metric" ? "km/jam" : "mph";
+---
+
+<Layout>
+  <main class="page">
+    <section class="hero">
+      <div class="hero__copy">
+        <p class="eyebrow">Ramalan Cuaca</p>
+        <h1>Langit di {resolvedAddress}</h1>
+        <p class="lede">{description}</p>
+        <form class="search" method="get" action="/">
+          <label class="sr-only" for="q">Cari lokasi</label>
+          <input
+            id="q"
+            name="q"
+            type="text"
+            placeholder="Cari kota atau kabupaten"
+            value={query}
+            required
+          />
+          <button type="submit">Lihat Ramalan</button>
+        </form>
+      </div>
+      <div class="hero__card">
+        {
+          error ? (
+            <div class="error">
+              <p>Ups! {error}</p>
+              <p>Coba periksa lokasi atau koneksi internet.</p>
+            </div>
+          ) : (
+            <div class="now">
+              <div>
+                <p class="label">Sekarang</p>
+                <p class="temp">
+                  {Math.round(current?.temp ?? 0)}
+                  <span>{tempUnit}</span>
+                </p>
+              </div>
+              <div class="meta">
+                <p>{current?.conditions ?? "Langit cerah"}</p>
+                <p>
+                  Terasa {Math.round(current?.feelslike ?? 0)}
+                  {tempUnit}
+                </p>
+                <p>Kelembapan {Math.round(current?.humidity ?? 0)}%</p>
+                <p>
+                  Angin {Math.round(current?.windspeed ?? 0)} {speedUnit}
+                </p>
+              </div>
+            </div>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="forecast">
+      <h2>5 Hari ke Depan</h2>
+      <div class="cards">
+        {
+          days.map((day) => {
+            const date = new Date(`${day.datetime}T00:00:00`);
+            return (
+              <article class="card">
+                <p class="card__date">{formatter.format(date)}</p>
+                <p class="card__temp">
+                  {Math.round(day.tempmax)}
+                  {tempUnit}
+                  <span>
+                    {" "}
+                    / {Math.round(day.tempmin)}
+                    {tempUnit}
+                  </span>
+                </p>
+                <p class="card__desc">{day.conditions}</p>
+                <div class="card__details">
+                  <span>Hujan {Math.round(day.precipprob ?? 0)}%</span>
+                  <span>UV {day.uvindex ?? 0}</span>
+                </div>
+              </article>
+            );
+          })
+        }
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .page {
+    min-height: 100vh;
+    padding: 48px clamp(20px, 4vw, 64px) 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .hero {
+    display: grid;
+    gap: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: center;
+  }
+
+  .hero__copy h1 {
+    font-family: "Fraunces", serif;
+    font-size: clamp(2.4rem, 3vw + 1.6rem, 4.5rem);
+    margin: 12px 0 10px;
+    letter-spacing: -0.02em;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #5b4c6e;
+  }
+
+  .lede {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 45ch;
+    color: #2f2b3e;
+  }
+
+  .search {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    max-width: 520px;
+  }
+
+  .search input {
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(12, 16, 32, 0.1);
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+  }
+
+  .search button {
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: none;
+    background: #14172c;
+    color: #f8f4ef;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 12px 25px rgba(20, 23, 44, 0.25);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .search button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(20, 23, 44, 0.3);
+  }
+
+  .hero__card {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 18px 40px rgba(22, 24, 45, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .now {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .label {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: #72568f;
+    margin-bottom: 6px;
+  }
+
+  .temp {
+    font-size: clamp(2.6rem, 2vw + 2rem, 3.6rem);
+    font-weight: 800;
+    margin: 0;
+  }
+
+  .temp span {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .meta {
+    display: grid;
+    gap: 6px;
+    font-size: 0.98rem;
+    color: #3a3549;
+  }
+
+  .error {
+    color: #6c1d1d;
+    background: #ffe8e8;
+    border-radius: 16px;
+    padding: 18px;
+    font-weight: 600;
+  }
+
+  .forecast h2 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+
+  .cards {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 16px 32px rgba(20, 23, 44, 0.08);
+    border: 1px solid rgba(12, 16, 32, 0.08);
+    display: grid;
+    gap: 10px;
+    transition: transform 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+  }
+
+  .card__date {
+    font-weight: 700;
+    color: #5c4a75;
+  }
+
+  .card__temp {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .card__temp span {
+    color: #6d6a80;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .card__desc {
+    color: #2b2a3b;
+    font-size: 0.95rem;
+  }
+
+  .card__details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #6d6a80;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  @media (max-width: 640px) {
+    .search {
+      grid-template-columns: 1fr;
+    }
+
+    .hero__card {
+      order: -1;
+    }
+  }
+</style>
